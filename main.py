@@ -3,6 +3,16 @@ import cv2
 import pyautogui
 import time
 import keyboardInput
+import numpy as np
+
+
+# Output video dimensions (increased)
+output_width = 1024
+output_height = 768
+
+# Calculate the dimensions of the squares
+square_width = int(output_width / 3)
+square_height = output_height
 
 # Initialize video capture
 cap = cv2.VideoCapture(0)
@@ -14,6 +24,20 @@ while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
         break
+
+    frame = cv2.resize(frame, (output_width, output_height))
+    height, width, channel = frame.shape
+
+    # Create an overlay
+    overlay = np.zeros_like(frame, dtype=np.uint8)
+
+    # Draw squares on the overlay
+    cv2.rectangle(overlay, (0, 0), (square_width, square_height), (255, 255, 255), -1)  # Left square
+    cv2.rectangle(overlay, (2 * square_width, 0), (output_width, square_height), (255, 255, 255), -1)  # Right square
+
+    # Combine the frame and overlay with opacity
+    opacity = 0.2
+    cv2.addWeighted(overlay, opacity, frame, 1 - opacity, 0, frame)
 
     # Flip the frame horizontally to fix mirroring
     frame = cv2.flip(frame, 1)
@@ -32,70 +56,52 @@ while cap.isOpened():
         for lm in lmList:
             data.extend([lm[0], 720 - lm[1], lm[2]])
 
-
-        print(f'X position : {data[9 * 3]}')
+        print(f'width : {width}')
+        print(f'height : {height}')
 
         # Check if hand is open or closed
         if data[12*3+1] > data[4*3+1]:  # Hand open
+            cv2.putText(frame, "Forward", (500, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
             keyboardInput.press_key('w')
             keyboardInput.release_key('s')
-            # pyautogui.keyUp("down")
-            # pyautogui.keyDown("up")
-            # # press_and_hold_key_continuously('s', 0.1)
-            if data[9 * 3] < 240:  # Hand left
+            if data[9 * 3] < square_width:  # Hand left
+                cv2.putText(frame, "Left", (100, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
                 keyboardInput.press_key('a')
             else:
                 keyboardInput.release_key('a')
 
-            if data[9 * 3] > 480:  # Hand right
+            if data[9 * 3] > square_width*2:  # Hand right
+                cv2.putText(frame, "Right", (800, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
                 keyboardInput.press_key('d')
             else:
                 keyboardInput.release_key('d')
         else:  # Hand closed
+            cv2.putText(frame, "Backward", (500, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
             keyboardInput.press_key('s')
             keyboardInput.release_key('w')
-            if data[9 * 3] < 240:  # Hand left
+            if data[9 * 3] < square_width:  # Hand left
+                cv2.putText(frame, "Left", (100, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
                 keyboardInput.press_key('a')
             else:
                 keyboardInput.release_key('a')
 
-            if data[9 * 3] > 480:  # Hand right
+            if data[9 * 3] > square_width * 2:  # Hand right
+                cv2.putText(frame, "Right", (800, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
                 keyboardInput.press_key('d')
             else:
                 keyboardInput.release_key('d')
-            # pyautogui.keyUp("up")
-            # pyautogui.keyDown("down")
-            # # press_and_hold_key_continuously('w', 0.1)
-            # if data[9*3] < 440:  # Hand left
-            #     press_and_hold_key_continuously('left', 0.1)
-            #
-            # if data[9*3] > 800:  # Hand right
-            #     press_and_hold_key_continuously('right', 0.1)
-
-
-
-
-#
 
 
     else:
         print('Show your hand to camera')
+        cv2.putText(frame, "No hand detected!", (500, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
         keyboardInput.release_key('w')
         keyboardInput.release_key('s')
         keyboardInput.release_key('a')
         keyboardInput.release_key('d')
 
-
-
-
-
-
-
-
     # Display the frame
     cv2.imshow('Hand Detection', frame)
-
-    # cv2.imshow('rgb Hand Detection', rgb_frame)
 
     # Break the loop if 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
