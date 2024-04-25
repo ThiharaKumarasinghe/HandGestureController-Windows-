@@ -47,10 +47,8 @@ while cap.isOpened():
     overlay = np.zeros_like(frame, dtype=np.uint8)
 
     # Draw squares on the overlay
-    # Left square
-    cv2.rectangle(overlay, (0, 0), (square_width, square_height), (255, 255, 255), -1)
-    # Right square
-    cv2.rectangle(overlay, (2 * square_width, 0), (output_width, square_height), (255, 255, 255), -1)
+    cv2.rectangle(overlay, (0, 0), (square_width, square_height), (255, 255, 255), -1)  # Left square
+    cv2.rectangle(overlay, (2 * square_width, 0), (output_width, square_height), (255, 255, 255), -1)  # Right square
 
     # Combine the frame and overlay with opacity
     opacity = 0.2
@@ -68,10 +66,18 @@ while cap.isOpened():
     # hands
     hands, frame = detector.findHands(frame)
 
+    # Overlay the original video with background blur except for the hand region
+    if hands:
+        mask = detector.getMask(frame)
+        frame = cv2.bitwise_and(background_blur, frame, mask=mask)
+    else:
+        frame = background_blur
+
+
+
     data =[]
     if hands:
 
-        # Convert hand coordinates in to one array
         hand = hands[0]
         lmList = hand['lmList']
         # print(lmList)
@@ -119,8 +125,6 @@ while cap.isOpened():
     else:
         print('Show your hand to the camera')
         cv2.putText(frame, "No hand detected!", (300, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
-
-        # Release all keys
         keyboardInput.release_key('w')
         keyboardInput.release_key('s')
         keyboardInput.release_key('a')
@@ -132,8 +136,7 @@ while cap.isOpened():
     # Display the original capturing video
     cv2.imshow('Original Video', originalVideo)
 
-    # Blured Image
-    # cv2.imshow('Hand blur', background_blur)
+    cv2.imshow('Hand blur', background_blur)
 
     # # Create subplots
     # fig, (ax1, ax2) = plt.subplots(1, 2)

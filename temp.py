@@ -4,6 +4,7 @@ import pyautogui
 import time
 import keyboardInput
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 # Output video dimensions (increased)
@@ -20,12 +21,26 @@ cap = cv2.VideoCapture(0)
 # Hand detector
 detector = HandDetector(maxHands=1, detectionCon=0.8)
 
+# Create background blur filter
+background_blur_kernel_size = (21, 21)  # Adjust as needed
+background_blur_sigma_x = 20  # Adjust as needed
+
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
         break
 
+    # to save the original video captured by the camera
+    originalVideo = frame
+
+    # Increase contrast and brightness for clarity enhancement
+    alpha = 1  # Contrast control (1.0-3.0)
+    beta = 2  # Brightness control (0-100)
+    frame = cv2.convertScaleAbs(frame, alpha=alpha, beta=beta)
+
+    # resize the video
     frame = cv2.resize(frame, (output_width, output_height))
+
     height, width, channel = frame.shape
 
     # Create an overlay
@@ -44,6 +59,9 @@ while cap.isOpened():
 
     # Convert BGR image to RGB
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Apply background blur
+    background_blur = cv2.GaussianBlur(originalVideo, background_blur_kernel_size, background_blur_sigma_x)
 
     # hands
     hands, frame = detector.findHands(frame)
@@ -105,6 +123,26 @@ while cap.isOpened():
 
     # Display the frame
     cv2.imshow('Hand Detection', frame)
+
+    # Display the original capturing video
+    cv2.imshow('Original Video', originalVideo)
+
+    # Blured Image
+    # cv2.imshow('Hand blur', background_blur)
+
+    # # Create subplots
+    # fig, (ax1, ax2) = plt.subplots(1, 2)
+    # fig.suptitle('Hand Detection')
+    #
+    # # Display the original capturing video
+    # ax1.imshow(cv2.cvtColor(originalVideo, cv2.COLOR_BGR2RGB))
+    # ax1.set_title('Original Video')
+    #
+    # # Display the frame with hand detection
+    # ax2.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    # ax2.set_title('Hand Detection')
+    #
+    # plt.show()
 
     # Break the loop if 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
