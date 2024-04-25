@@ -50,6 +50,7 @@ while cap.isOpened():
 
     data =[]
     if hands:
+
         hand = hands[0]
         lmList = hand['lmList']
         # print(lmList)
@@ -60,8 +61,9 @@ while cap.isOpened():
         print(f'height : {height}')
 
         # Check if hand is open or closed
-        if data[12*3+1] > data[4*3+1]:  # Hand open
-            cv2.putText(frame, "Forward", (500, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+        # Hand open
+        if data[12*3+1] > data[4*3+1]:
+            cv2.putText(frame, "Forward", (400, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
             keyboardInput.press_key('w')
             keyboardInput.release_key('s')
             if data[9 * 3] < square_width:  # Hand left
@@ -75,8 +77,10 @@ while cap.isOpened():
                 keyboardInput.press_key('d')
             else:
                 keyboardInput.release_key('d')
-        else:  # Hand closed
-            cv2.putText(frame, "Backward", (500, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+
+        # Hand closed
+        else:
+            cv2.putText(frame, "Backward", (405, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
             keyboardInput.press_key('s')
             keyboardInput.release_key('w')
             if data[9 * 3] < square_width:  # Hand left
@@ -91,10 +95,9 @@ while cap.isOpened():
             else:
                 keyboardInput.release_key('d')
 
-
     else:
         print('Show your hand to camera')
-        cv2.putText(frame, "No hand detected!", (500, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+        cv2.putText(frame, "No hand detected!", (300, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
         keyboardInput.release_key('w')
         keyboardInput.release_key('s')
         keyboardInput.release_key('a')

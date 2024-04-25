@@ -1,78 +1,115 @@
-import numpy as np
-import mediapipe as mp
+from cvzone.HandTrackingModule import HandDetector
 import cv2
-import time
-
 import pyautogui
+import time
+import keyboardInput
+import numpy as np
 
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
-mp_hands = mp.solutions.hands
 
+# Output video dimensions (increased)
+output_width = 1024
+output_height = 768
+
+# Calculate the dimensions of the squares
+square_width = int(output_width / 3)
+square_height = output_height
+
+# Initialize video capture
 cap = cv2.VideoCapture(0)
 
-with mp_hands.Hands(
-        model_complexity=0,
-        min_detection_confidence=0.4,
-        min_tracking_confidence=0.4) as hands:
-    while cap.isOpened():
+# Hand detector
+detector = HandDetector(maxHands=1, detectionCon=0.8)
 
-        success, image = cap.read()
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
 
-        h, w, c = image.shape
+    frame = cv2.resize(frame, (output_width, output_height))
+    height, width, channel = frame.shape
 
-        start = time.perf_counter()
+    # Create an overlay
+    overlay = np.zeros_like(frame, dtype=np.uint8)
 
-        # Flip the image horizontally for a later selfie-view display
-        # Convert the BGR image to RGB.
-        image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
+    # Draw squares on the overlay
+    cv2.rectangle(overlay, (0, 0), (square_width, square_height), (255, 255, 255), -1)  # Left square
+    cv2.rectangle(overlay, (2 * square_width, 0), (output_width, square_height), (255, 255, 255), -1)  # Right square
 
-        # To improve performance, optionally mark the image as not writeable to
-        # pass by reference.
-        image.flags.writeable = False
+    # Combine the frame and overlay with opacity
+    opacity = 0.2
+    cv2.addWeighted(overlay, opacity, frame, 1 - opacity, 0, frame)
 
-        # Process the image and find hands
-        results = hands.process(image)
+    # Flip the frame horizontally to fix mirroring
+    frame = cv2.flip(frame, 1)
 
-        image.flags.writeable = True
+    # Convert BGR image to RGB
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # Draw the hand annotations on the image.
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    # hands
+    hands, frame = detector.findHands(frame)
 
-        if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
+    data =[]
+    if hands:
 
-                mp_drawing.draw_landmarks(
-                    image, hand_landmarks, mp_hands.HAND_CONNECTIONS,
-                    mp_drawing_styles.get_default_hand_landmarks_style(),
-                    mp_drawing_styles.get_default_hand_connections_style())
+        hand = hands[0]
+        lmList = hand['lmList']
+        # print(lmList)
+        for lm in lmList:
+            data.extend([lm[0], 720 - lm[1], lm[2]])
 
-                index_finger_tip = hand_landmarks.landmark[0]
+        print(f'width : {width}')
+        print(f'height : {height}')
 
-                index_finger_tip_x = index_finger_tip.x * w
-                index_finger_tip_y = index_finger_tip.y * h
+        # Check if hand is open or closed
+        # Hand open
+        if data[12*3+1] > data[4*3+1]:
+            cv2.putText(frame, "Forward", (400, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+            keyboardInput.press_key('w')
+            keyboardInput.release_key('s')
+            if data[9 * 3] < square_width:  # Hand left
+                cv2.putText(frame, "Left", (100, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+                keyboardInput.press_key('a')
+            else:
+                keyboardInput.release_key('a')
 
-                if index_finger_tip_x > w / 2:
-                    cv2.putText(image, "Gas", (500, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
-                    pyautogui.keyDown('right')
-                    pyautogui.keyUp('left')
-                elif index_finger_tip_x < w / 2:
-                    cv2.putText(image, "Brake", (500, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 0, 0), 2)
-                    pyautogui.keyDown('left')
-                    pyautogui.keyUp('right')
+            if data[9 * 3] > square_width*2:  # Hand right
+                cv2.putText(frame, "Right", (800, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+                keyboardInput.press_key('d')
+            else:
+                keyboardInput.release_key('d')
 
-        cv2.line(image, (int(w / 2), 0), (int(w / 2), h), (0, 255, 0), 2)
+        # Hand closed
+        else:
+            cv2.putText(frame, "Backward", (405, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+            keyboardInput.press_key('s')
+            keyboardInput.release_key('w')
+            if data[9 * 3] < square_width:  # Hand left
+                cv2.putText(frame, "Left", (100, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+                keyboardInput.press_key('a')
+            else:
+                keyboardInput.release_key('a')
 
-        end = time.perf_counter()
-        totalTime = end - start
+            if data[9 * 3] > square_width * 2:  # Hand right
+                cv2.putText(frame, "Right", (800, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+                keyboardInput.press_key('d')
+            else:
+                keyboardInput.release_key('d')
 
-        fps = 1 / totalTime
+    else:
+        print('Show your hand to the camera')
+        cv2.putText(frame, "No hand detected!", (300, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
+        keyboardInput.release_key('w')
+        keyboardInput.release_key('s')
+        keyboardInput.release_key('a')
+        keyboardInput.release_key('d')
 
-        cv2.putText(image, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2)
+    # Display the frame
+    cv2.imshow('Hand Detection', frame)
 
-        cv2.imshow('MediaPipe Hands', image)
+    # Break the loop if 'q' is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
-        if cv2.waitKey(5) & 0xFF == 27:
-            break
-
+# Release resources
 cap.release()
+cv2.destroyAllWindows()
